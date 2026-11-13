@@ -6,6 +6,7 @@
 from contextlib import contextmanager
 import json
 from pathlib import Path
+from random import choice
 import re
 import sqlite3
 from urllib.parse import urlsplit
@@ -331,7 +332,18 @@ if view == "레시피 찾기":
         key: f"{row.RCP_NM} · {row.RCP_PAT2} (#{key})"
         for key, row in ordered.iterrows()
     }
-    selected = recipe_col.selectbox("레시피", list(options), format_func=options.__getitem__)
+    # 룰렛은 현재 검색과 필터를 통과한 메뉴에서 뽑고 상세 화면의 선택값을 바꿉니다.
+    if st.button("메뉴 룰렛 돌리기", icon=":material/shuffle:", type="primary"):
+        current = st.session_state.get("recipe_selection")
+        candidates = [key for key in options if key != current]
+        winner = choice(candidates or list(options))
+        st.session_state["recipe_selection"] = winner
+        st.success(f"룰렛 결과 · {ordered.at[winner, 'RCP_NM']}")
+    if st.session_state.get("recipe_selection") not in options:
+        st.session_state["recipe_selection"] = next(iter(options))
+    selected = recipe_col.selectbox(
+        "레시피", list(options), format_func=options.__getitem__, key="recipe_selection"
+    )
     favorite_button(str(selected), favorites)
     if selected in personal:
         show_personal_recipe(personal[selected])
